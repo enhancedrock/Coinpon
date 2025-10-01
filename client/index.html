@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>coinpon!</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                background: #171717;
+                font-family: 'Arial', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                overflow: hidden;
+            }
+
+            .game-container {
+                width: 100vw;
+                height: 100vh;
+                max-width: calc(100vh * (16 / 9));
+                max-height: calc(100vw * (9 / 16));
+                background: radial-gradient(ellipse at center bottom, #2b1c37 0%, #171717 100%);
+                border: 3px solid #000000;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="game-container" id="gameContainer">
+            <!-- Game content will go here -->
+        </div>
+    </body>
+</html>
