@@ -12,30 +12,116 @@
             }
 
             body {
+                margin: 0;
                 background: #171717;
+
                 font-family: 'Arial', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
+
+                display: grid;
+                place-items: center;
+
                 min-height: 100vh;
-                overflow: hidden;
+                min-height: 100dvh;
             }
 
             .game-container {
                 aspect-ratio: 16 / 9;
-                width: 100%;
-                height: 100%;
+                width: min(100vw, calc(100vh * (16 / 9)));
+                width: min(100vw, calc(100dvh * (16 / 9)));
+
                 background: radial-gradient(ellipse at center bottom, #2b1c37 0%, #171717 100%);
                 border: 3px solid #000000;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
                 position: relative;
                 overflow: hidden;
+            }
+            
+            .game-content {
+                width: 1280px;
+                height: 720px;
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform-origin: top left;
+            }
+
+            .arcade-picker-button {
+                width: 575px;
+                height: 60px;
+                background-color: #373737;
+                border: 2px solid #000;
+                border-radius: 15px;
+                color: white;
+                font-size: 24px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .arcade-picker-button-label {
+                font-style: italic;
+                text-align: left;
+                
+                margin: none;
+                margin-left: 15px;
+                
+                flex-basis: 94%;
+
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .arcade-picker-button-arrow {
+                font-style: italic;
+                text-align: right;
+                
+                margin: 0;
+                margin-right: 15px;
+                
+                flex-basis: 6%
             }
         </style>
     </head>
     <body>
         <div class="game-container" id="gameContainer">
-            <!-- Game content will go here -->
+            <div class="game-content" id="gameContent">
+                <img src="coinpon.png" alt="coinpon logo" style="width: 450px; display: block; margin-left: auto; margin-right: auto; padding-top: 5px;">
+                <p style="color: white; text-align: center; font-size: 24px; margin-top: 10px; font-style: italic;">
+                    pick an arcade! or, 
+                    <u style="cursor:pointer;" onclick="addArcade()" onmouseover="this.style.color='#9562bf'" onmouseout="this.style.color='white'">add one</u>!
+                </p>
+                <script>
+                
+                </script>
+                <div class="arcade-picker" id="arcadePicker" style="height: 350px; width: 600px; background-color: #272727; border: 2px solid #000; border-radius: 30px; margin: 20px auto; display: flex; align-items: center; justify-content: center;">
+                    <button class="arcade-picker-button">
+                        <p class="arcade-picker-button-label">pon.enhancedrock.hackclub.app</p>
+                        <p class="arcade-picker-button-arrow">→</p>
+                    </button>
+                </div>
+            </div>
         </div>
+
+        <script>
+            function updateScale() {
+                const container = document.getElementById('gameContainer');
+                const content = document.getElementById('gameContent');
+                const containerWidth = container.offsetWidth;
+                const scale = containerWidth / 1280;
+                content.style.transform = `scale(${scale})`;
+            }
+            
+            function addArcade() {
+                // Your JS code here
+                alert('Add arcade clicked!');
+            }
+
+            window.addEventListener('load', updateScale);
+            window.addEventListener('resize', updateScale);
+        </script>
     </body>
 </html>
