@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>coinpon! - pon</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                background: #171717;
+
+                font-family: 'Arial', sans-serif;
+
+                display: grid;
+                place-items: center;
+
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+
+            .game-container {
+                aspect-ratio: 16 / 9;
+                width: min(100vw, calc(100vh * (16 / 9)));
+                width: min(100vw, calc(100dvh * (16 / 9)));
+
+                background: radial-gradient(ellipse at center bottom, #2b1c37 0%, #171717 100%);
+                border: 3px solid #000000;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .game-content {
+                width: 1280px;
+                height: 720px;
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform-origin: top left;
+            }
+
+            .pon-label {
+                color: white;
+                font-size: 24px;
+                font-style: italic;
+                text-align: center;
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="game-container" id="gameContainer">
+            <div class="game-content" id="gameContent">
+                <!-- 500px -->
+                <div style="position: absolute; width: 350px; height: 65px; background-color: #ffffec; top: 20px; left: 50%; transform: translateX(-50%)">
+                    <h1 style="color: #000000; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 330px;">Loading Pons</h1>
+                </div>
+                <div style="position: absolute; width: 350px; height: 210px; background-color: #ffffec; top: 85px; left: 50%; transform: translateX(-50%); z-index: 1;" >
+                    <div style="position: absolute; width: 350px; height: 20px; background-color: #000000; left: 50%; transform: translateX(-50%); opacity: 65%; z-index: 2;"></div>
+                    <div style="position: absolute; width: 350px; height: 190px; background-color: #000000; top: 20px; left: 50%; transform: translateX(-50%); opacity: 55%; z-index: 2;"></div>
+                </div>
+                <div style="position: absolute; width: 350px; height: 260px; background-color: #ffffec; top: 295px; left: 50%; transform: translateX(-50%); z-index: 4"></div>
+                <div style="position: absolute; width: 850px; height: 100px; background-color: #373737; bottom: 3%; left: 50%; transform: translateX(-50%);">
+                    <img src="images/ponicon.png" alt="pon!" style="height: 100px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);">
+                    <p class="pon-label">pon!</p>
+                </div>
+            </div>
+        </div>
+        <script>
+            function updateScale() {
+                const container = document.getElementById('gameContainer');
+                const content = document.getElementById('gameContent');
+                const containerWidth = container.offsetWidth;
+                const scale = containerWidth / 1280;
+                content.style.transform = `scale(${scale})`;
+            }
+
+            async function hello() {
+                try {
+                    const token = document.cookie.split('; ').find(row => row.startsWith('token='))
+                        ?.split('=')[1] || '';
+                    const response = await fetch('/api/account/whoami', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ token: token })
+                    });
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const data = await response.json();
+                    document.querySelector('.hello').textContent = "Hello, " + data.username + "!";
+                }
+                catch (error) {
+                    console.error('Error getting MOTD:', error);
+                    document.querySelector('.motd').textContent = "Welcome to Coinpon!";
+                }
+            }
+
+            window.addEventListener('load', hello);
+            window.addEventListener('load', updateScale);
+            window.addEventListener('resize', updateScale);
+        </script>
+    </body>
+</html>

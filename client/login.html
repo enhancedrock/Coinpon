@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>coinpon! - log in</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                background: #171717;
+
+                font-family: 'Arial', sans-serif;
+
+                display: grid;
+                place-items: center;
+
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+
+            .game-container {
+                aspect-ratio: 16 / 9;
+                width: min(100vw, calc(100vh * (16 / 9)));
+                width: min(100vw, calc(100dvh * (16 / 9)));
+
+                background: radial-gradient(ellipse at center bottom, #2b1c37 0%, #171717 100%);
+                border: 3px solid #000000;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .game-content {
+                width: 1280px;
+                height: 720px;
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform-origin: top left;
+            }
+
+            input {
+                display: block;
+                margin: 0px auto;
+                margin-bottom: 10px;
+                padding: 10px;
+                font-size: 18px;
+                color: white;
+                background-color: #373737;
+                border: 2px solid #000;
+                border-radius: 7.5px;
+                width: 350px;
+                height: 50px;
+            }
+            input:focus {
+                border-color: #ffff;
+                outline: none;
+            }
+            input::placeholder {
+                color: #bbb;
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="game-container" id="gameContainer">
+            <div class="game-content" id="gameContent">
+                <img src="coinpon.png" alt="coinpon logo" style="width: 450px; display: block; margin-left: auto; margin-right: auto; padding-top: 5px; margin-bottom: 40px;">
+                <p class="motd" style="color: white; text-align: center; font-size: 24px; margin-top: 10px; margin-bottom: 25px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 20px; margin-right: 20px;">
+                    getting arcade motd...
+                </p>
+                <div style="display: flex; align-items: center; justify-content: flex-start; width: 350px; margin: 0 auto 10px auto;">
+                    <input type="checkbox" id="rememberMe" style="width: 15px; height: 15px; margin: 0px; margin-right: 8px; margin-left: 2px;">
+                    <label for="rememberMe" style="color: white; font-size: 16px;">remember me</label>
+                </div>
+                <input type="text" placeholder="username">
+                <input type="password" placeholder="password">
+                <div style="display: flex; gap: 10px; justify-content: center; width: 500px; margin-left: auto; margin-right: auto;">
+                    <input type="button" value="log in" style="width: 170px; margin-right: 0px;" onclick="login()">
+                    <input type="button" value="register" style="width: 170px; margin-left: 0px;" onclick="register()">
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function updateScale() {
+                const container = document.getElementById('gameContainer');
+                const content = document.getElementById('gameContent');
+                const containerWidth = container.offsetWidth;
+                const scale = containerWidth / 1280;
+                content.style.transform = `scale(${scale})`;
+            }
+            
+            async function getServerMOTD() {
+                try {
+                    const response = await fetch('/api/hello');
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                        document.querySelector('.motd').textContent = "Welcome to Coinpon!";
+                    }
+                    const data = await response.json();
+                    document.querySelector('.motd').textContent = data.motd;
+                }
+                catch (error) {
+                    console.error('Error getting MOTD:', error);
+                    document.querySelector('.motd').textContent = "Welcome to Coinpon!";
+                }
+            }
+
+            function login() {
+                const username = document.querySelector('input[type="text"]').value;
+                const password = document.querySelector('input[type="password"]').value;
+                
+                fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) {
+                        alert(data.detail || 'Login failed.');
+                        throw new Error(data.detail || 'Network response was not ok');
+                    }
+                    else {
+                        document.cookie = "token=" + data.token;
+                        window.location.href = "pon.html";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during login:', error);
+                });
+
+            }
+
+            function register() {
+                const username = document.querySelector('input[type="text"]').value;
+                const password = document.querySelector('input[type="password"]').value;
+                
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) {
+                        alert(data.detail || 'Registration failed.');
+                        throw new Error(data.detail || 'Network response was not ok');
+                    }
+                    else {
+                        alert("Registration successful! You can now log in.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during login:', error);
+                });
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                getServerMOTD();
+            });
+            window.addEventListener('load', updateScale);
+            window.addEventListener('resize', updateScale);
+        </script>
+    </body>
+</html>
