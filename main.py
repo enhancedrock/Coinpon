@@ -3,6 +3,7 @@ import os
 from typing import Optional
 import re
 from contextlib import asynccontextmanager
+import json
 import secrets
 import bcrypt
 from fastapi import FastAPI, HTTPException
@@ -14,6 +15,7 @@ import aiosqlite
 
 VERSION = "1.0.0"
 DB_PATH = os.getenv("DB_PATH", "database.db")
+PONDATA = {}
 
 with open("config.yml", "r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
@@ -36,7 +38,11 @@ async def init_db():
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             token TEXT UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            active_for TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            coins INTEGER DEFAULT 3,
+            tokens INTEGER DEFAULT 0
         )
         """)
         await db.commit()
@@ -98,10 +104,25 @@ async def generate_token(username: str) -> str:
         await db.commit()
     return token
 
+async def load_pons():
+    ponfolders = [f for f in os.listdir("pons") if os.path.isdir(os.path.join("pons", f))]
+    PONDATA["pons"] = {}
+    for pon in ponfolders:
+        if os.path.exists("pons/" + pon + "/meta.json"):
+            with open("pons/" + pon + "/meta.json", "r", encoding="utf-8") as f:
+                meta = f.read()
+            try:
+                meta_json = json.loads(meta)
+                pon_id = meta_json["id"]
+                PONDATA["pons"][pon_id] = meta_json
+            except Exception:
+                pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database on startup."""
     await init_db()
+    await load_pons()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -159,6 +180,116 @@ async def login(user: UserAuth):
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
     return {"token": await generate_token(user.username)}
+
+@app.post("/api/pons/list")
+async def get_pons(token: TokenModel):
+    """Get a list of pons"""
+    username = await identify_user(token.token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    return {"pons": [list(PONDATA["pons"].keys())]}
+
+@app.post("/api/pons/details")
+async def get_pon_meta(data: dict):
+    """Get details for a specific pon"""
+    token = data.get("token")
+    pon_id = data.get("pon_id")
+    if not token or not pon_id:
+        raise HTTPException(status_code=400, detail="Token and pon_id are required.")
+    username = await identify_user(token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    pon_meta = PONDATA["pons"].get(pon_id)
+    if not pon_meta:
+        raise HTTPException(status_code=404, detail="Pon not found.")
+    meta_no_cards = dict(pon_meta)
+    meta_no_cards.pop("cards", None)
+    return {"meta": meta_no_cards}
+
+@app.post("/api/pons/cards")
+async def get_pon_cards(data: dict):
+    """Get cards for a specific pon"""
+    token = data.get("token")
+    pon_id = data.get("pon_id")
+    if not token or not pon_id:
+        raise HTTPException(status_code=400, detail="Token and pon_id are required.")
+    username = await identify_user(token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    pon_meta = PONDATA["pons"].get(pon_id)
+    if not pon_meta:
+        raise HTTPException(status_code=404, detail="Pon not found.")
+    cards = pon_meta.get("cards", [])
+    return {"cards": cards}
+
+@app.post("api/pons/cards/data")
+async def get_pon_card_data(data: dict):
+    """Get data for a specific card"""
+    token = data.get("token")
+    pon_id = data.get("pon_id")
+    card_id = data.get("card_id")
+    if not token or not pon_id or not card_id:
+        raise HTTPException(status_code=400, detail="Token, pon_id, and card_id are required.")
+    username = await identify_user(token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    pon_meta = PONDATA["pons"].get(pon_id)
+    if not pon_meta:
+        raise HTTPException(status_code=404, detail="Pon not found.")
+    cards = pon_meta.get("cards", [])
+    card = next((c for c in cards if c["name"] == card_id), None)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found.")
+    return {"card": card}
+
+@app.post("/api/pons/cards/image")
+async def get_pon_card_image(data: dict):
+    """Get image for a specific card"""
+    token = data.get("token")
+    pon_id = data.get("pon_id")
+    card_id = data.get("card_id")
+    variety_id = data.get("variety_id")
+    if not token or not pon_id or not card_id:
+        raise HTTPException(status_code=400, detail="Token, pon_id, and card_id are required.")
+    username = await identify_user(token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    pon_meta = PONDATA["pons"].get(pon_id)
+    if not pon_meta:
+        raise HTTPException(status_code=404, detail="Pon not found.")
+    cards = pon_meta.get("cards", [])
+    card = next((c for c in cards if c["name"] == card_id), None)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found.")
+
+    ponfolders = [f for f in os.listdir("pons") if os.path.isdir(os.path.join("pons", f))]
+    pon_folder = None
+    for folder in ponfolders:
+        meta_path = os.path.join("pons", folder, "meta.json")
+        if os.path.exists(meta_path):
+            with open(meta_path, "r", encoding="utf-8") as f:
+                folder_meta = json.loads(f.read())
+                if folder_meta.get("id") == pon_id:
+                    pon_folder = folder
+                    break
+
+    if not pon_folder:
+        raise HTTPException(status_code=404, detail="Pon folder not found.")
+
+    if "varieties" in card and not variety_id:
+        raise HTTPException(status_code=400, detail="variety_id is required for cards with varieties.")
+    if "varieties" in card and variety_id:
+        variety = next((v for v in card["varieties"] if v["name"] == variety_id), None)
+        if not variety:
+            raise HTTPException(status_code=404, detail="Variety not found.")
+        image_path = f"pons/{pon_folder}/{card_id}/{variety['file']}"
+    else:
+        image_path = f"pons/{pon_folder}/{card['file']}"
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail="Image file not found.")
+    return FileResponse(image_path)
+
+
 
 @app.get("/")
 async def redirect_to_auth():

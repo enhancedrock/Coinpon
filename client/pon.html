@@ -35,6 +35,15 @@
 
                 position: relative;
                 overflow: hidden;
+                
+                /* Hide initially until authentication is verified */
+                opacity: 0;
+                visibility: hidden;
+            }
+            
+            .game-container.authenticated {
+                opacity: 1;
+                visibility: visible;
             }
             
             .game-content {
@@ -56,20 +65,44 @@
                 left: 50%;
                 transform: translateX(-50%);
             }
+
+            .rotatable-knob {
+                cursor: grab;
+                transition: transform 0.1s ease-out;
+            }
+
+            .rotatable-knob:active {
+                cursor: grabbing;
+            }
+
+            .rotatable-knob.locked {
+                cursor: default;
+            }
         </style>
     </head>
     <body>
+        <p id="authMessage" style="color: white; font-size: 2rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">authenticating</p>
         <div class="game-container" id="gameContainer">
             <div class="game-content" id="gameContent">
-                <!-- 500px -->
                 <div style="position: absolute; width: 350px; height: 65px; background-color: #ffffec; top: 20px; left: 50%; transform: translateX(-50%)">
-                    <h1 style="color: #000000; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 330px;">Loading Pons</h1>
+                    <h1 style="color: #000000; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 330px;">stock fruits</h1>
                 </div>
                 <div style="position: absolute; width: 350px; height: 210px; background-color: #ffffec; top: 85px; left: 50%; transform: translateX(-50%); z-index: 1;" >
                     <div style="position: absolute; width: 350px; height: 20px; background-color: #000000; left: 50%; transform: translateX(-50%); opacity: 65%; z-index: 2;"></div>
                     <div style="position: absolute; width: 350px; height: 190px; background-color: #000000; top: 20px; left: 50%; transform: translateX(-50%); opacity: 55%; z-index: 2;"></div>
                 </div>
-                <div style="position: absolute; width: 350px; height: 260px; background-color: #ffffec; top: 295px; left: 50%; transform: translateX(-50%); z-index: 4"></div>
+                <div style="position: absolute; width: 350px; height: 260px; background-color: #ffffec; top: 295px; left: 50%; transform: translateX(-50%); z-index: 4">
+                    <div class="rotatable-knob locked" id="gachaponKnob" style="position: absolute; width: 160px; height: 160px; background-color: #ffffec; border-radius: 87.5px; border: 4px solid rgb(67, 67, 67); z-index: 5; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <div style="position: absolute; width: 25px; height: 145px; background-color: #ffffec; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"></div>
+                        <div style="position: absolute; width: 25px; height: 120px; background-color: #ffffec; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: -6px 0 8px 0 rgba(0,0,0,0.3), 6px 0 8px 0 rgba(0,0,0,0.3);"></div>
+                    </div>
+                    <div style="position: absolute; width: 65px; height: 65px; background-color: #ababab; border-radius: 87.5px; border: 4px solid rgb(67, 67, 67); z-index: 5; top: 50%; left: 50%; transform: translate(150%, -180%); cursor: pointer;" onclick="clapThoseCheeksBigBoy()">
+                        <div style="position: absolute; width: 7.5px; height: 50px; background-color: #121212; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"></div>
+                    </div>
+                    <div style="position: absolute; width: 90px; height: 90px; border-radius: 45px; border: 4px solid rgb(67, 67, 67); z-index: 5; top: 50%; left: 50%; transform: translate(-185%, 35%);">
+                        <div id="capsule-out" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 45px 45px 45px 45px; background-color: #000000; z-index: 5; opacity: 50%"></div>
+                    </div>
+                </div>
                 <div style="position: absolute; width: 850px; height: 100px; background-color: #373737; bottom: 3%; left: 50%; transform: translateX(-50%);">
                     <img src="images/ponicon.png" alt="pon!" style="height: 100px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);">
                     <p class="pon-label">pon!</p>
@@ -86,31 +119,154 @@
             }
 
             async function hello() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) {
+                    window.location.href = '/client/login.html';
+                    return;
+                }
+
+                // Validate token with the API
                 try {
-                    const token = document.cookie.split('; ').find(row => row.startsWith('token='))
-                        ?.split('=')[1] || '';
+                    const tokenValue = token.split('=')[1];
                     const response = await fetch('/api/account/whoami', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ token: token })
+                        body: JSON.stringify({ token: tokenValue })
                     });
+                    
                     if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                        // Token is invalid, delete it and redirect to login
+                        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        window.location.href = '/client/login.html';
+                        return;
                     }
-                    const data = await response.json();
-                    document.querySelector('.hello').textContent = "Hello, " + data.username + "!";
+                } catch (error) {
+                    // Network error or other issue, delete token and redirect
+                    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    window.location.href = '/client/login.html';
+                    return;
                 }
-                catch (error) {
-                    console.error('Error getting MOTD:', error);
-                    document.querySelector('.motd').textContent = "Welcome to Coinpon!";
-                }
+                
+                // Authentication successful, hide auth message and show the game container
+                const authMessage = document.getElementById('authMessage');
+                const gameContainer = document.getElementById('gameContainer');
+                
+                authMessage.style.display = 'none';
+                gameContainer.classList.add('authenticated');
             }
 
             window.addEventListener('load', hello);
             window.addEventListener('load', updateScale);
             window.addEventListener('resize', updateScale);
+
+            let isKnobGrabbable = false;
+            let isRotating = false;
+            let startAngle = 0;
+            let currentRotation = 0;
+            let totalRotation = 0;
+
+            function initKnobRotation() {
+                const knob = document.getElementById('gachaponKnob');
+
+                function getAngle(centerX, centerY, clientX, clientY) {
+                    return Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+                }
+
+                function startRotation(clientX, clientY) {
+                    if (!isKnobGrabbable) return;
+                    
+                    isRotating = true;
+                    const rect = knob.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    startAngle = getAngle(centerX, centerY, clientX, clientY);
+                    knob.style.transition = 'none';
+                }
+
+                function updateRotation(clientX, clientY) {
+                    if (!isRotating || !isKnobGrabbable) return;
+                    
+                    const rect = knob.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const currentAngle = getAngle(centerX, centerY, clientX, clientY);
+                    
+                    let deltaAngle = currentAngle - startAngle;
+                    
+                    // Handle angle wrapping
+                    if (deltaAngle > 180) deltaAngle -= 360;
+                    if (deltaAngle < -180) deltaAngle += 360;
+                    
+                    currentRotation += deltaAngle;
+                    totalRotation += Math.abs(deltaAngle);
+                    
+                    knob.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
+                    startAngle = currentAngle;
+                    
+                    // Check if completed a full rotation (360 degrees)
+                    if (totalRotation >= 360) {
+                        completeRotation();
+                    }
+                }
+
+                function stopRotation() {
+                    if (!isRotating) return;
+                    isRotating = false;
+                    knob.style.transition = 'transform 0.1s ease-out';
+                }
+
+                function completeRotation() {
+                    isKnobGrabbable = false;
+                    knob.classList.add('locked');
+                    totalRotation = 0;
+                    
+                    // actual logic here
+                    animateCapsuleOut();
+                }
+
+                // Mouse events
+                knob.addEventListener('mousedown', (e) => startRotation(e.clientX, e.clientY));
+                document.addEventListener('mousemove', (e) => updateRotation(e.clientX, e.clientY));
+                document.addEventListener('mouseup', stopRotation);
+                
+                // Touch events for mobile
+                knob.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    startRotation(touch.clientX, touch.clientY);
+                });
+                document.addEventListener('touchmove', (e) => {
+                    if (isRotating) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        updateRotation(touch.clientX, touch.clientY);
+                    }
+                });
+                document.addEventListener('touchend', stopRotation);
+            }
+            
+            function clapThoseCheeksBigBoy() {
+                const knob = document.getElementById('gachaponKnob');
+                knob.classList.remove('locked');
+                isKnobGrabbable = true;
+            }
+
+            function animateCapsuleOut() {
+                let i = 100;
+                const capsuleout = document.getElementById("capsule-out");
+
+                const interval = setInterval(() => {
+                    capsuleout.style.clipPath = `inset(0 0 ${100 - i}% 0)`;
+                    i--;
+                    if (i === 0) {
+                        clearInterval(interval);
+                    }
+                }, 1);
+            }
+
+            window.addEventListener('load', initKnobRotation);
         </script>
     </body>
 </html>

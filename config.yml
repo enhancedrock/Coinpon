@@ -1,2 +1,31 @@
+# If new registrations to your arcade should be allowed
 registrations: true
+# The message of the day shown on login
 motd: "welcome to the official coinpon server!"
+
+# How many coins online users get every x minutes
+active-coin-interval: 5
+active-coin-amount: 1
+
+# How many coins offline users get every x minutes
+offline-coin-interval: 30
+offline-coin-amount: 1
+
+# If trading between users is enabled
+trading: true
+# If the use of coins in trading is enabled
+trading-coins: true
+# The maximum rarity of pon that can be traded
+trading-max-rarity: 5
+
+# If the auction house is enabled
+auction-house: true
+# The fee percentage taken from the seller when a pon is sold
+auction-fee: 10
+# The maximum rarity of pon that can be sold in the auction house
+auction-max-rarity: 5
+
+# The minimum rarity of card to gain coins when recycled
+recycle-min-rarity: 3
+# The amount of luck points (*rarity) to gain when recycle
+recycle-lp-amount: 5
