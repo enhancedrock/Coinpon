@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>coinpon! - collection</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                background: #171717;
+
+                font-family: 'Arial', sans-serif;
+
+                display: grid;
+                place-items: center;
+
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+
+            .game-container {
+                aspect-ratio: 16 / 9;
+                width: min(100vw, calc(100vh * (16 / 9)));
+                width: min(100vw, calc(100dvh * (16 / 9)));
+
+                background: radial-gradient(ellipse at center bottom, #2b1c37 0%, #171717 100%);
+                border: 3px solid #000000;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+                position: relative;
+                overflow: hidden;
+                
+                /* Hide initially until authentication is verified */
+                opacity: 0;
+                visibility: hidden;
+            }
+            
+            .game-container.authenticated {
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            .game-content {
+                width: 1280px;
+                height: 720px;
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform-origin: top left;
+            }
+
+            .pon-label {
+                color: white;
+                font-size: 24px;
+                font-style: italic;
+                text-align: center;
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                user-select: none;
+            }
+
+            /* doto-900 - latin */
+            @font-face {
+                font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+                font-family: 'Doto';
+                font-style: normal;
+                font-weight: 900;
+                src: url('fonts/doto-v3-latin-900.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+            }
+        </style>
+    </head>
+    <body>
+        <p id="authMessage" style="color: white; font-size: 2rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">authenticating</p>
+        <div class="game-container" id="gameContainer">
+            <div class="game-content" id="gameContent">
+                <div style="position: absolute; width: 850px; height: 100px; background-color: #373737; bottom: 3%; left: 50%; transform: translateX(-50%);">
+                    <a href="/client/pon.html">
+                        <img src="images/ponicon.png" alt="pon!" style="height: 100px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); cursor: pointer;">
+                    </a>
+                    <p class="pon-label" style="font-style: normal;">pon!</p>
+                    <img src="images/collectionicon.png" alt="collection" style="height: 100px; position: absolute; bottom: 30%; left: 75%; transform: translateX(-50%);">
+                    <p class="pon-label" style="left: 75%;">collection</p>
+                </div>
+            </div>
+        </div>
+        <script>
+            function updateScale() {
+                const container = document.getElementById('gameContainer');
+                const content = document.getElementById('gameContent');
+                const containerWidth = container.offsetWidth;
+                const scale = containerWidth / 1280;
+                content.style.transform = `scale(${scale})`;
+            }
+
+
+
+            async function hello() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) {
+                    window.location.href = '/client/login.html';
+                    return;
+                }
+
+                // validate token
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/account/whoami', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ token: tokenValue })
+                    });
+                    
+                    if (!response.ok) {
+                        // delete invalid token & redirect
+                        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        window.location.href = '/client/login.html';
+                        return;
+                    }
+                } catch (error) {
+                    // other issue, delete & redirect
+                    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    window.location.href = '/client/login.html';
+                    return;
+                }
+                
+                // success, hide auth and show game
+                const authMessage = document.getElementById('authMessage');
+                const gameContainer = document.getElementById('gameContainer');
+                
+                authMessage.style.display = 'none';
+                gameContainer.classList.add('authenticated');
+            }
+
+            async function sendHeartbeat() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) return;
+
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/account/heartbeat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ token: tokenValue })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        // upd coin counter with the heartbeat response
+                        const coinCountElement = document.getElementById('coinCount');
+                        if (coinCountElement && data.coins !== undefined) {
+                            coinCountElement.textContent = data.coins.toString();
+                            console.log('Heartbeat sent, coin count updated:', data.coins);
+                        }
+                    } else {
+                        console.error('Failed to send heartbeat');
+                    }
+                } catch (error) {
+                    console.error('Error sending heartbeat:', error);
+                }
+            }
+
+            function startHeartbeat() {
+                // send initial heartbeat
+                sendHeartbeat();
+                
+                // set up interval to send heartbeat every 30 seconds (30000 milliseconds)
+                setInterval(sendHeartbeat, 30000);
+                console.log('Heartbeat started - sending every 30 seconds');
+            }
+
+            window.addEventListener('resize', updateScale);
+            window.addEventListener('load', startHeartbeat);
+            window.addEventListener('load', updateScale);
+            window.addEventListener('load', hello);
+        </script>
+    </body>
+</html>

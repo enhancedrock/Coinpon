@@ -64,6 +64,7 @@
                 bottom: 10px;
                 left: 50%;
                 transform: translateX(-50%);
+                user-select: none;
             }
 
             .rotatable-knob {
@@ -78,14 +79,165 @@
             .rotatable-knob.locked {
                 cursor: default;
             }
+
+            .awarded-card-bg {
+                position: fixed;
+                width: 270px;
+                height: 480px;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                background: #311b1b;
+                border: 2px solid #222;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+                overflow: hidden;
+            }
+
+            .awarded-card-title {
+                width: 100%;
+                text-align: center;
+                position: absolute;
+                top: 0;
+                left: 0;
+                background: rgba(0, 0, 0, 0.5);
+                color: #fff;
+                font-family: 'Doto', sans-serif;
+                font-weight: 900;
+                font-size: 1.2rem;
+                padding: 6px 0;
+                z-index: 10001;
+                user-select: none;
+            }
+
+            .awarded-card-image {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: block;
+                z-index: 10000;
+            }
+
+            .awarded-card-rarity {
+                width: 100%;
+                text-align: center;
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                background: rgba(0, 0, 0, 0.5);
+                color: #ffd700;
+                font-family: 'Doto', sans-serif;
+                font-weight: 900;
+                font-size: 1.1rem;
+                padding: 6px 0;
+                z-index: 10001;
+                user-select: none;
+            }
+
+            .cabinet-arrow {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 60px;
+                height: 60px;
+                background: rgba(255, 255, 255, 0.8);
+                border: 3px solid #000;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                font-size: 24px;
+                font-weight: bold;
+                color: #000;
+                user-select: none;
+                transition: all 0.2s ease;
+                z-index: 100;
+            }
+
+            .cabinet-arrow:hover {
+                background: rgba(255, 255, 255, 1);
+                transform: translateY(-50%) scale(1.1);
+            }
+
+            .cabinet-arrow:active {
+                transform: translateY(-50%) scale(0.95);
+            }
+
+            .cabinet-arrow.disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+            
+            /* Ensure arrows are clickable */
+            .cabinet-arrow {
+                pointer-events: auto;
+            }
+
+            .cabinet-arrow.left {
+                left: 50px;
+            }
+
+            .cabinet-arrow.right {
+                right: 50px;
+            }
+
+            .coin-counter {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.9);
+                border: 3px solid #000;
+                border-radius: 10px;
+                padding: 10px 15px;
+                font-family: 'Doto', sans-serif;
+                font-weight: 900;
+                font-size: 18px;
+                color: #000;
+                user-select: none;
+                z-index: 200;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .coin-counter .coin-icon {
+                font-size: 20px;
+                color: #ffd700;
+            }
+
+            /* doto-900 - latin */
+            @font-face {
+                font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+                font-family: 'Doto';
+                font-style: normal;
+                font-weight: 900;
+                src: url('fonts/doto-v3-latin-900.woff2') format('woff2'); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+            }
         </style>
     </head>
     <body>
         <p id="authMessage" style="color: white; font-size: 2rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">authenticating</p>
         <div class="game-container" id="gameContainer">
             <div class="game-content" id="gameContent">
+                <!-- Navigation arrows -->
+                <div class="cabinet-arrow left" id="leftArrow">‹</div>
+                <div class="cabinet-arrow right" id="rightArrow">›</div>
+                
+                <!-- Coin counter -->
+                <div class="coin-counter" id="coinCounter">
+                    <span class="coin-icon">🪙</span>
+                    <span id="coinCount">--</span>
+                </div>
+                
                 <div style="position: absolute; width: 350px; height: 65px; background-color: #ffffec; top: 20px; left: 50%; transform: translateX(-50%)">
-                    <h1 style="color: #000000; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 330px;">stock fruits</h1>
+                    <h1 style="color: #000000; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 330px; user-select: none;">loading</h1>
                 </div>
                 <div style="position: absolute; width: 350px; height: 210px; background-color: #ffffec; top: 85px; left: 50%; transform: translateX(-50%); z-index: 1;" >
                     <div style="position: absolute; width: 350px; height: 20px; background-color: #000000; left: 50%; transform: translateX(-50%); opacity: 65%; z-index: 2;"></div>
@@ -96,7 +248,11 @@
                         <div style="position: absolute; width: 25px; height: 145px; background-color: #ffffec; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"></div>
                         <div style="position: absolute; width: 25px; height: 120px; background-color: #ffffec; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: -6px 0 8px 0 rgba(0,0,0,0.3), 6px 0 8px 0 rgba(0,0,0,0.3);"></div>
                     </div>
-                    <div style="position: absolute; width: 65px; height: 65px; background-color: #ababab; border-radius: 87.5px; border: 4px solid rgb(67, 67, 67); z-index: 5; top: 50%; left: 50%; transform: translate(150%, -180%); cursor: pointer;" onclick="clapThoseCheeksBigBoy()">
+                    <div style="position: absolute; width: 75px; height: 75px; background-color: #ffffff; left: 375px; top: 7.5px; border-radius: 5px; border: 2px solid #000000;">
+                        <p style="color: #000000; font-family: 'Doto', sans-serif; font-weight: 900; font-size: 20px; position: absolute; top: 0; left: 50%; transform: translateX(-50%); margin: 0; user-select: none;">NEED</p>
+                        <p style="color: #000000; font-family: 'Doto', sans-serif; font-weight: 900; font-size: 44px; position: absolute; top: 18px; left: 53%; transform: translate(-50%, 0); margin: 0; text-align: center; width: 100%; user-select: none;" id="need-coins">??</p>
+                    </div>
+                    <div id="coin-slot" style="position: absolute; width: 65px; height: 65px; background-color: #ababab; border-radius: 87.5px; border: 4px solid rgb(67, 67, 67); z-index: 5; top: 50%; left: 50%; transform: translate(150%, -180%); cursor: pointer;" onclick="clapThoseCheeksBigBoy()">
                         <div style="position: absolute; width: 7.5px; height: 50px; background-color: #121212; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;"></div>
                     </div>
                     <div style="position: absolute; width: 90px; height: 90px; border-radius: 45px; border: 4px solid rgb(67, 67, 67); z-index: 5; top: 50%; left: 50%; transform: translate(-185%, 35%);">
@@ -106,6 +262,10 @@
                 <div style="position: absolute; width: 850px; height: 100px; background-color: #373737; bottom: 3%; left: 50%; transform: translateX(-50%);">
                     <img src="images/ponicon.png" alt="pon!" style="height: 100px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);">
                     <p class="pon-label">pon!</p>
+                    <a href="/client/collection.html">
+                        <img src="images/collectionicon.png" alt="collection" style="height: 100px; position: absolute; bottom: 30%; left: 75%; transform: translateX(-50%);">
+                    </a>
+                    <p class="pon-label" style="left: 75%; font-style: normal;">collection</p>
                 </div>
             </div>
         </div>
@@ -125,7 +285,7 @@
                     return;
                 }
 
-                // Validate token with the API
+                // validate token
                 try {
                     const tokenValue = token.split('=')[1];
                     const response = await fetch('/api/account/whoami', {
@@ -137,19 +297,19 @@
                     });
                     
                     if (!response.ok) {
-                        // Token is invalid, delete it and redirect to login
+                        // delete invalid token & redirect
                         document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                         window.location.href = '/client/login.html';
                         return;
                     }
                 } catch (error) {
-                    // Network error or other issue, delete token and redirect
+                    // other issue, delete & redirect
                     document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                     window.location.href = '/client/login.html';
                     return;
                 }
                 
-                // Authentication successful, hide auth message and show the game container
+                // success, hide auth and show game
                 const authMessage = document.getElementById('authMessage');
                 const gameContainer = document.getElementById('gameContainer');
                 
@@ -157,8 +317,298 @@
                 gameContainer.classList.add('authenticated');
             }
 
+            async function loadCabinet(cabinetNumber) {
+                console.log('Loading cabinet:', cabinetNumber);
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) {
+                    console.error('No token found');
+                    return false;
+                }
+
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/pons/details', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            token: tokenValue,
+                            pon_id: cabinetNumber
+                        })
+                    });
+                    
+                    console.log('API response status:', response.status);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const meta = data.meta;
+                        console.log('Cabinet loaded successfully:', meta);
+                        
+                        // store the current pon_id for API calls
+                        currentPonId = meta.id;
+                        currentCabinetNumber = cabinetNumber;
+                        
+                        // update cabinet color - target elements by their positions/structure rather than color
+                        console.log('Updating cabinet color to:', meta.color);
+                        const cabinetElements = [
+                            document.querySelector('div[style*="width: 350px; height: 65px"]'), // top panel
+                            document.querySelector('div[style*="width: 350px; height: 210px"]'), // middle panel  
+                            document.querySelector('div[style*="width: 350px; height: 260px"]'), // bottom panel
+                            document.querySelector('#gachaponKnob'), // knob
+                            document.querySelector('#gachaponKnob > div:first-child'), // knob inner vertical
+                            document.querySelector('#gachaponKnob > div:last-child') // knob inner shadow
+                        ];
+                        
+                        cabinetElements.forEach((element, index) => {
+                            if (element) {
+                                console.log(`Updating element ${index} background color to ${meta.color}`);
+                                element.style.backgroundColor = meta.color;
+                            } else {
+                                console.log(`Element ${index} not found`);
+                            }
+                        });
+                        
+                        // update cabinet name
+                        const nameElement = document.querySelector('h1');
+                        if (nameElement) {
+                            nameElement.textContent = meta.cabname;
+                        }
+                        
+                        // update cost
+                        const needCoinsElement = document.getElementById('need-coins');
+                        if (needCoinsElement) {
+                            needCoinsElement.textContent = meta.cost.toString().padStart(2, '0');
+                        }
+                        
+                        updateArrowStates();
+                        return true;
+                    } else {
+                        // handle "Out of range" or other errors
+                        console.log('Failed to load cabinet, status:', response.status);
+                        const errorText = await response.text();
+                        console.log('Error response:', errorText);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Failed to load cabinet:', error);
+                    return false;
+                }
+            }
+
+            async function updateCoinCounter() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) return;
+
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/account/whoami', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ token: tokenValue })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const coinCountElement = document.getElementById('coinCount');
+                        if (coinCountElement) {
+                            coinCountElement.textContent = data.coins.toString();
+                        }
+                        console.log('Coin count updated:', data.coins);
+                    } else {
+                        console.error('Failed to fetch coin count');
+                    }
+                } catch (error) {
+                    console.error('Error updating coin counter:', error);
+                }
+            }
+
+            async function sendHeartbeat() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) return;
+
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/account/heartbeat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ token: tokenValue })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        // update coin counter with the heartbeat response
+                        const coinCountElement = document.getElementById('coinCount');
+                        if (coinCountElement && data.coins !== undefined) {
+                            coinCountElement.textContent = data.coins.toString();
+                            console.log('Heartbeat sent, coin count updated:', data.coins);
+                        }
+                    } else {
+                        console.error('Failed to send heartbeat');
+                    }
+                } catch (error) {
+                    console.error('Error sending heartbeat:', error);
+                }
+            }
+
+            function startHeartbeat() {
+                // send initial heartbeat
+                sendHeartbeat();
+                
+                // set up interval to send heartbeat every 30 seconds (30000 milliseconds)
+                setInterval(sendHeartbeat, 30000);
+                console.log('Heartbeat started - sending every 30 seconds');
+            }
+
+            function resetMachineState() {
+                console.log('Resetting machine state');
+                
+                // reset capsule-out window (remove any clipPath styling)
+                const capsuleOut = document.getElementById('capsule-out');
+                if (capsuleOut) {
+                    capsuleOut.style.clipPath = '';
+                    console.log('Capsule-out window reset');
+                }
+                
+                // reset NEED counter to the current cabinet's cost
+                if (currentPonId) {
+                    loadCurrentCabinetCost();
+                }
+                
+                // reset knob state
+                const knob = document.getElementById('gachaponKnob');
+                if (knob) {
+                    knob.classList.add('locked');
+                    isKnobGrabbable = false;
+                    // reset knob rotation to 0
+                    currentRotation = 0;
+                    totalRotation = 0;
+                    knob.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+                    console.log('Knob state reset');
+                }
+            }
+
+            async function loadCurrentCabinetCost() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token) return;
+
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/pons/details', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            token: tokenValue,
+                            pon_id: currentCabinetNumber
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const needCoinsElement = document.getElementById('need-coins');
+                        if (needCoinsElement) {
+                            needCoinsElement.textContent = data.meta.cost.toString().padStart(2, '0');
+                            console.log('NEED counter reset to:', data.meta.cost);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading cabinet cost:', error);
+                }
+            }
+
+            async function loadPonDetails() {
+                // reset max cabinet number on initial load
+                maxCabinetNumber = null;
+                await loadCabinet(currentCabinetNumber);
+                // update coin counter on initial load
+                await updateCoinCounter();
+                // start heartbeat system
+                startHeartbeat();
+            }
+
+            window.previousCabinet = async function() {
+                console.log('Previous cabinet clicked. Current:', currentCabinetNumber);
+                if (currentCabinetNumber <= 1) {
+                    console.log('Already at cabinet 1, cannot go back');
+                    return;
+                }
+                
+                const success = await loadCabinet(currentCabinetNumber - 1);
+                if (!success) {
+                    // if loading failed, we've hit the beginning
+                    console.log('Failed to load previous cabinet');
+                    updateArrowStates();
+                }
+            };
+
+            window.nextCabinet = async function() {
+                console.log('Next cabinet clicked. Current:', currentCabinetNumber);
+                const success = await loadCabinet(currentCabinetNumber + 1);
+                if (!success) {
+                    // if loading failed, we've hit the end, so set max
+                    console.log('Failed to load next cabinet, setting max to:', currentCabinetNumber);
+                    maxCabinetNumber = currentCabinetNumber;
+                    updateArrowStates();
+                }
+            };
+
+            function updateArrowStates() {
+                const leftArrow = document.getElementById('leftArrow');
+                const rightArrow = document.getElementById('rightArrow');
+                
+                if (!leftArrow || !rightArrow) {
+                    console.error('Arrow elements not found');
+                    return;
+                }
+                
+                console.log('Updating arrow states. Current cabinet:', currentCabinetNumber, 'Max cabinet:', maxCabinetNumber);
+                
+                // left arrow disabled if we're at cabinet 1
+                if (currentCabinetNumber <= 1) {
+                    leftArrow.classList.add('disabled');
+                } else {
+                    leftArrow.classList.remove('disabled');
+                }
+                
+                // right arrow disabled if we know we've reached the maximum
+                // only disable if we've actually tried to go beyond and failed
+                if (maxCabinetNumber !== null && currentCabinetNumber >= maxCabinetNumber) {
+                    rightArrow.classList.add('disabled');
+                } else {
+                    rightArrow.classList.remove('disabled');
+                }
+            }
+
+            function initNavigationButtons() {
+                const leftArrow = document.getElementById('leftArrow');
+                const rightArrow = document.getElementById('rightArrow');
+                
+                if (leftArrow) {
+                    leftArrow.addEventListener('click', window.previousCabinet);
+                    console.log('Left arrow event listener added');
+                } else {
+                    console.error('Left arrow element not found');
+                }
+                
+                if (rightArrow) {
+                    rightArrow.addEventListener('click', window.nextCabinet);
+                    console.log('Right arrow event listener added');
+                } else {
+                    console.error('Right arrow element not found');
+                }
+            }
+
             window.addEventListener('load', hello);
             window.addEventListener('load', updateScale);
+            window.addEventListener('load', loadPonDetails);
+            window.addEventListener('load', updateArrowStates);
+            window.addEventListener('load', initNavigationButtons);
             window.addEventListener('resize', updateScale);
 
             let isKnobGrabbable = false;
@@ -166,6 +616,12 @@
             let startAngle = 0;
             let currentRotation = 0;
             let totalRotation = 0;
+            let soundTriggerRotation = 0;
+            let currentWindSound = null;
+            let fallingCapsule = null;
+            let currentCabinetNumber = 1;
+            let currentPonId = null;
+            let maxCabinetNumber = null; // track the highest valid cabinet number we've found
 
             function initKnobRotation() {
                 const knob = document.getElementById('gachaponKnob');
@@ -195,17 +651,36 @@
                     
                     let deltaAngle = currentAngle - startAngle;
                     
-                    // Handle angle wrapping
+                    // handle angle wrapping
                     if (deltaAngle > 180) deltaAngle -= 360;
                     if (deltaAngle < -180) deltaAngle += 360;
                     
+                    // only allow clockwise rotation (positive deltaAngle)
+                    if (deltaAngle <= 0) return;
+                    
+                    // play wind sound every 36 degrees of rotation
+                    if (deltaAngle > 0) {
+                        soundTriggerRotation += deltaAngle;
+                        let soundsToPlay = Math.floor(soundTriggerRotation / 36);
+                        if (soundsToPlay > 0) {
+                            // for fast rotation, play multiple overlapping sounds with slight delays
+                            for (let i = 0; i < soundsToPlay; i++) {
+                                setTimeout(() => {
+                                    const windSound = new Audio('/client/sounds/wind.wav');
+                                    windSound.play();
+                                }, i * 50); // 50ms delay between each sound
+                            }
+                            soundTriggerRotation = soundTriggerRotation % 9;
+                        }
+                    }
+                    
                     currentRotation += deltaAngle;
-                    totalRotation += Math.abs(deltaAngle);
+                    totalRotation += deltaAngle;
                     
                     knob.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
                     startAngle = currentAngle;
                     
-                    // Check if completed a full rotation (360 degrees)
+                    // check if completed a full rotation
                     if (totalRotation >= 360) {
                         completeRotation();
                     }
@@ -222,16 +697,15 @@
                     knob.classList.add('locked');
                     totalRotation = 0;
                     
-                    // actual logic here
                     animateCapsuleOut();
                 }
 
-                // Mouse events
+                // mouse events
                 knob.addEventListener('mousedown', (e) => startRotation(e.clientX, e.clientY));
                 document.addEventListener('mousemove', (e) => updateRotation(e.clientX, e.clientY));
                 document.addEventListener('mouseup', stopRotation);
                 
-                // Touch events for mobile
+                // touch events
                 knob.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     const touch = e.touches[0];
@@ -247,10 +721,31 @@
                 document.addEventListener('touchend', stopRotation);
             }
             
-            function clapThoseCheeksBigBoy() {
-                const knob = document.getElementById('gachaponKnob');
-                knob.classList.remove('locked');
-                isKnobGrabbable = true;
+            async function clapThoseCheeksBigBoy() {
+                const needCoinsElem = document.getElementById('need-coins');
+                let currentCoins = parseInt(needCoinsElem.textContent, 10);
+                if (!isNaN(currentCoins) && currentCoins >= 1) {
+                    currentCoins -= 1;
+                    needCoinsElem.textContent = currentCoins.toString().padStart(2, '0');
+                    const coinsound = new Audio('/client/sounds/coininsert.wav');
+                    coinsound.play();
+                    coinsound.onended = async () => {
+                        if (currentCoins === 0) {
+                            const knob = document.getElementById('gachaponKnob');
+                            knob.classList.remove('locked');
+                            isKnobGrabbable = true;
+                            
+                            const unlocksound = new Audio('/client/sounds/unlock.wav');
+                            unlocksound.play();
+                            // rotate knob 5 degrees as a visual indicator that i unlocked it mwahahahaha EVIL knob
+                            knob.style.transition = 'none';
+                            currentRotation += 5;
+                            knob.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
+                        }
+                        // update coin counter after using coins
+                        await updateCoinCounter();
+                    };
+                }
             }
 
             function animateCapsuleOut() {
@@ -262,9 +757,247 @@
                     i--;
                     if (i === 0) {
                         clearInterval(interval);
+                        // start the capsule falling animation
+                        animateFallingCapsule();
                     }
                 }, 1);
             }
+
+            function animateFallingCapsule() {
+                // create falling capsule
+                fallingCapsule = document.createElement('img');
+                fallingCapsule.src = 'images/ponicon.png';
+                fallingCapsule.style.position = 'absolute';
+                fallingCapsule.style.width = '45px';
+                fallingCapsule.style.height = '45px';
+                fallingCapsule.style.zIndex = '1000';
+                fallingCapsule.style.pointerEvents = 'none';
+                fallingCapsule.style.filter = 'drop-shadow(0 0 40px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 60px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 80px rgba(0, 0, 0, 0.2))';
+                
+                // start in center
+                const startSize = 45;
+                const startX = 517 - (startSize / 2);
+                const startY = 500 - (startSize / 2);
+                
+                fallingCapsule.style.left = startX + 'px';
+                fallingCapsule.style.top = startY + 'px';
+                
+                document.getElementById('gameContent').appendChild(fallingCapsule);
+                
+                // just grow in place (haha erection im so funny)
+                let currentSize = startSize;
+                const targetSize = 100; // "it's average"
+                const animationDuration = 1000; // why the FUCK does js use miliseconds for everything
+                const startTime = Date.now();
+                
+                function updateCapsule() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / animationDuration, 1);
+                    
+                    // easing
+                    const easeProgress = 1 - Math.pow(1 - progress, 3);
+                    
+                    // update size while keeping centered
+                    currentSize = startSize + (targetSize - startSize) * easeProgress;
+                    const currentX = 517 - (currentSize / 2);
+                    const currentY = 500 - (currentSize / 2);
+                    
+                    fallingCapsule.style.left = currentX + 'px';
+                    fallingCapsule.style.top = currentY + 'px';
+                    fallingCapsule.style.width = currentSize + 'px';
+                    fallingCapsule.style.height = currentSize + 'px';
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateCapsule);
+                    } else {
+                        // cum
+                        setTimeout(() => {
+                            turnScreenWhite();
+                        }, 200);
+                    }
+                }
+                
+                requestAnimationFrame(updateCapsule);
+            }
+
+            async function turnScreenWhite() {
+                // create le cum
+                const whiteOverlay = document.createElement('div');
+                whiteOverlay.style.position = 'fixed';
+                whiteOverlay.style.top = '0';
+                whiteOverlay.style.left = '0';
+                whiteOverlay.style.width = '100vw';
+                whiteOverlay.style.height = '100vh';
+                whiteOverlay.style.backgroundColor = '#2b1c37';
+                whiteOverlay.style.zIndex = '10000';
+                whiteOverlay.style.opacity = '0';
+                whiteOverlay.style.transition = 'opacity 0.5s ease-in-out';
+                
+                document.body.appendChild(whiteOverlay);
+                
+                // cum on the screen
+                setTimeout(() => {
+                    whiteOverlay.style.opacity = '1';
+                    // remove the falling capsule instantly when screen blanks
+                    if (fallingCapsule && fallingCapsule.parentNode) {
+                        fallingCapsule.parentNode.removeChild(fallingCapsule);
+                        fallingCapsule = null;
+                    }
+                }, 10);
+                
+                // wait for it... wait for it.. wait for itttt
+                setTimeout(async () => {
+                    // uncum
+                    whiteOverlay.style.opacity = '0';
+                    
+                    // wait for uncum, delete overlay, pull
+                    setTimeout(async () => {
+                        document.body.removeChild(whiteOverlay);
+                        await pullCard();
+                    }, 500);
+                }, 1000);
+            }
+
+            async function pullCard() {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                if (!token || !currentPonId) return;
+
+                try {
+                    const tokenValue = token.split('=')[1];
+                    const response = await fetch('/api/pons/pull', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            token: tokenValue,
+                            pon_id: currentPonId
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        showCard(data.card_id);
+                        // update coin counter after pulling a card
+                        await updateCoinCounter();
+                    } else {
+                        console.error('Failed to pull card');
+                    }
+                } catch (error) {
+                    console.error('Error pulling card:', error);
+                }
+            }
+
+            async function showCard(cardId) {
+                // parse cardId for cardid/variety
+                const [baseCardId, varietyId] = cardId.split('/');
+                
+                // create card display
+                const cardElement = document.createElement('div');
+                cardElement.className = 'awarded-card-bg';
+                cardElement.style.opacity = '0';
+                cardElement.style.transition = 'opacity 0.5s ease-in-out';
+                cardElement.style.position = 'absolute';
+                cardElement.style.left = '50%';
+                cardElement.style.top = '50%';
+                cardElement.style.transform = 'translate(-50%, -50%)';
+                
+                // get card data for rarity
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+                const tokenValue = token.split('=')[1];
+                
+                try {
+                    const cardDataResponse = await fetch('/api/pons/cards/data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            token: tokenValue,
+                            pon_id: currentPonId,
+                            card_id: baseCardId
+                        })
+                    });
+                    
+                    let cardName = "Card";
+                    let rarity = "?";
+                    let imageSrc = "images/ponicon.png";
+                    
+                    if (cardDataResponse.ok) {
+                        const cardData = await cardDataResponse.json();
+                        const card = cardData.card;
+                        rarity = card.rarity;
+                        
+                        // get card name and image
+                        if (varietyId && card.varieties) {
+                            const variety = card.varieties.find(v => v.id === varietyId);
+                            if (variety) {
+                                cardName = variety.name;
+                            }
+                        } else if (card.name) {
+                            cardName = card.name;
+                        }
+                        
+                        // get card image
+                        const imageRequestBody = { 
+                            token: tokenValue,
+                            pon_id: currentPonId,
+                            card_id: baseCardId
+                        };
+                        if (varietyId) {
+                            imageRequestBody.variety_id = varietyId;
+                        }
+                        
+                        const imageResponse = await fetch('/api/pons/cards/image', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(imageRequestBody)
+                        });
+                        
+                        if (imageResponse.ok) {
+                            // blob for image
+                            const imageBlob = await imageResponse.blob();
+                            imageSrc = URL.createObjectURL(imageBlob);
+                        }
+                    }
+                    
+                    cardElement.innerHTML = `
+                        <div class="awarded-card-title">
+                            ${cardName}
+                        </div>
+                        <img src="${imageSrc}" class="awarded-card-image">
+                        <div class="awarded-card-rarity">
+                            ${rarity}★
+                        </div>
+                    `;
+                    
+                    document.getElementById('gameContent').appendChild(cardElement);
+                    
+                    // fade in the card
+                    setTimeout(() => {
+                        cardElement.style.opacity = '1';
+                    }, 10);
+                    
+                    // fade out after 3 seconds
+                    setTimeout(() => {
+                        cardElement.style.opacity = '0';
+                        
+                        // remove after fade out
+                        setTimeout(() => {
+                            document.getElementById('gameContent').removeChild(cardElement);
+                            // reset the machine state after card display is finished
+                            resetMachineState();
+                        }, 500);
+                    }, 3000);
+                    
+                } catch (error) {
+                    console.error('Error showing card:', error);
+                }
+            }
+            
+
 
             window.addEventListener('load', initKnobRotation);
         </script>

@@ -1,6 +1,7 @@
 """Main coinpoin server"""
 import os
 from typing import Optional
+from datetime import datetime
 import re
 from contextlib import asynccontextmanager
 import json
@@ -12,6 +13,7 @@ from fastapi.responses import RedirectResponse, FileResponse
 from pydantic import BaseModel
 import yaml
 import aiosqlite
+import ponmanager
 
 VERSION = "1.0.0"
 DB_PATH = os.getenv("DB_PATH", "database.db")
@@ -34,14 +36,14 @@ async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             token TEXT UNIQUE NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            active_for TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            coins INTEGER DEFAULT 3,
+            active_for INTEGER DEFAULT 0 NOT NULL,
+            coins INTEGER DEFAULT 5,
+            last_coin TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             tokens INTEGER DEFAULT 0
         )
         """)
@@ -118,6 +120,13 @@ async def load_pons():
             except Exception:
                 pass
 
+async def get_coins(username: str) -> int:
+    """Get a users coins"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("SELECT coins FROM users WHERE username = ?", (username,))
+        result = await cursor.fetchone()
+        return result[0] if result else 0
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database on startup."""
@@ -133,7 +142,59 @@ async def account_details(token: TokenModel):
     username = await identify_user(token.token)
     if username is None:
         raise HTTPException(status_code=404, detail="User not found or invalid token.")
-    return {"username": username}
+    return {"username": username, "coins": await get_coins(username)}
+
+@app.post("/api/account/heartbeat")
+async def account_heartbeat(token: TokenModel):
+    """Update heartbeat for a user"""
+    username = await identify_user(token.token)
+    if username is None:
+        raise HTTPException(status_code=404, detail="User not found or invalid token.")
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET last_heartbeat = CURRENT_TIMESTAMP WHERE username = ?", (username,))
+        await db.commit()
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Check if active_for >= config["active-coin-interval"]*2
+        cursor = await db.execute(
+            "SELECT active_for FROM users WHERE username = ?", (username,)
+        )
+        result = await cursor.fetchone()
+        if result:
+            active_for = result[0]
+            if active_for is not None and active_for >= config["active-coin-interval"] * 2:
+                await db.execute(
+                    "UPDATE users SET active_for = 0, coins = coins + ? WHERE username = ?",
+                    (config["active-coin-amount"], username)
+                )
+                await db.commit()
+        cursor = await db.execute(
+            "SELECT last_heartbeat FROM users WHERE username = ?", (username,)
+        )
+        result = await cursor.fetchone()
+        if result:
+
+            last_heartbeat = result[0]
+            # Convert last_heartbeat to timestamp
+            if isinstance(last_heartbeat, str):
+                try:
+                    last_heartbeat_dt = datetime.strptime(last_heartbeat, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    last_heartbeat_dt = datetime.fromisoformat(last_heartbeat)
+            else:
+                last_heartbeat_dt = last_heartbeat
+
+            now = datetime.utcnow()
+            diff = (now - last_heartbeat_dt).total_seconds()
+            if diff < 60:
+                await db.execute(
+                    "UPDATE users SET active_for = active_for + 1 WHERE username = ?", (username,)
+                )
+            else:
+                await db.execute(
+                    "UPDATE users SET active_for = 0 WHERE username = ?", (username,)
+                )
+            await db.commit()
+    return {"detail": "Heartbeat updated.", "coins": await get_coins(username)}
 
 @app.get("/api/hello")
 async def hello():
@@ -199,6 +260,14 @@ async def get_pon_meta(data: dict):
     username = await identify_user(token)
     if username is None:
         raise HTTPException(status_code=401, detail="Invalid token.")
+    if isinstance(pon_id, int):
+        pon_keys = list(PONDATA["pons"].keys())
+        if pon_id < 1:
+            raise HTTPException(status_code=400, detail="Out of range.")
+        elif pon_id > len(pon_keys):
+            raise HTTPException(status_code=400, detail="Out of range.")
+        else:
+            pon_id = pon_keys[pon_id - 1]
     pon_meta = PONDATA["pons"].get(pon_id)
     if not pon_meta:
         raise HTTPException(status_code=404, detail="Pon not found.")
@@ -222,7 +291,7 @@ async def get_pon_cards(data: dict):
     cards = pon_meta.get("cards", [])
     return {"cards": cards}
 
-@app.post("api/pons/cards/data")
+@app.post("/api/pons/cards/data")
 async def get_pon_card_data(data: dict):
     """Get data for a specific card"""
     token = data.get("token")
@@ -237,7 +306,7 @@ async def get_pon_card_data(data: dict):
     if not pon_meta:
         raise HTTPException(status_code=404, detail="Pon not found.")
     cards = pon_meta.get("cards", [])
-    card = next((c for c in cards if c["name"] == card_id), None)
+    card = next((c for c in cards if c.get("id") == card_id), None)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found.")
     return {"card": card}
@@ -258,7 +327,7 @@ async def get_pon_card_image(data: dict):
     if not pon_meta:
         raise HTTPException(status_code=404, detail="Pon not found.")
     cards = pon_meta.get("cards", [])
-    card = next((c for c in cards if c["name"] == card_id), None)
+    card = next((c for c in cards if c.get("id") == card_id), None)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found.")
 
@@ -279,7 +348,7 @@ async def get_pon_card_image(data: dict):
     if "varieties" in card and not variety_id:
         raise HTTPException(status_code=400, detail="variety_id is required for cards with varieties.")
     if "varieties" in card and variety_id:
-        variety = next((v for v in card["varieties"] if v["name"] == variety_id), None)
+        variety = next((v for v in card["varieties"] if v.get("id") == variety_id), None)
         if not variety:
             raise HTTPException(status_code=404, detail="Variety not found.")
         image_path = f"pons/{pon_folder}/{card_id}/{variety['file']}"
@@ -289,7 +358,20 @@ async def get_pon_card_image(data: dict):
         raise HTTPException(status_code=404, detail="Image file not found.")
     return FileResponse(image_path)
 
-
+@app.post("/api/pons/pull")
+async def pull_pon(data: dict):
+    """Pull a pon card"""
+    token = data.get("token")
+    pon_id = data.get("pon_id")
+    if not token or not pon_id:
+        raise HTTPException(status_code=400, detail="Token and pon_id are required.")
+    username = await identify_user(token)
+    if username is None:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    card_id = await ponmanager.pull(username, pon_id)
+    if card_id is None:
+        raise HTTPException(status_code=400, detail="Could not pull card. Check if you have enough coins or if the pon exists.")
+    return {"card_id": card_id}
 
 @app.get("/")
 async def redirect_to_auth():
