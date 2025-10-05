@@ -29,3 +29,7 @@ here's what isn't yet:
 - recycling
 - a card collection page
 - idle coins
+
+# credit
+credit for the coin insertion sound:
+https://freesound.org/people/tweeterdj/sounds/29648/
