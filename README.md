@@ -1,5 +1,5 @@
-# coinpon!
-
+# coinpon!
+![coinponbanner](https://raw.githubusercontent.com/enhancedrock/Coinpon/refs/heads/main/client/coinpon.png)
 coinpon is a game where individuals host their own 'arcades' (coinpon servers), where they can create gachapon machines for users to play with!
 
 by default, users are granted a coin for every 5 minutes they're online, and every 30 they're not, which they can then use on the gachapon machines made by the arcade owner!
